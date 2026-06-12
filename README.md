@@ -58,3 +58,6 @@ Built on Nothing's visual language: dot-matrix as structure (Doto), Space Mono
 for machine text, Space Grotesk for human text, sharp segments inside 16px
 cards, motion that slams and settles instead of floating, and brand red
 exactly once. Not affiliated with Nothing Technology — just an admirer.
+
+Original idea inspired by one long prompt from
+[@dominikmartn](https://x.com/dominikmartn).
