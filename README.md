@@ -6,8 +6,7 @@ signals from your browser — frame rate, JS heap, battery, network, input —
 rendered like the industrial instrument panel of a design engineer's
 workstation in New York.
 
-> *null* — Nothing. *frame* — the render loop. A null frame is a dropped
-> frame; this board exists to catch them.
+<img width="800" height="564" alt="ezgif-6ebe98534d0a1056" src="https://github.com/user-attachments/assets/62151183-b537-4123-bc68-d6e250d1078f" />
 
 ## What's actually live
 
