@@ -2,17 +2,22 @@ import { useEffect, useRef, useState } from 'react'
 import { useReducedMotion } from 'motion/react'
 import { Card } from '../Card'
 import { useCtl } from '../../system/hooks'
-import { contributions, totalContribs, USER, WEEKS, DAYS } from '../../system/fake'
+import { contributions as fakeContrib, totalContribs as fakeTotal, USER, WEEKS, DAYS } from '../../system/fake'
+import { useGitHub } from '../../system/github'
 import { useT } from '../../system/i18n'
 
 const GAP = 3
 
 export function ContributionsCard({ index }: { index: number }) {
   const ctl = useCtl()
+  const gh = useGitHub()
   const t = useT()
   const motionOff = (useReducedMotion() ?? false) || ctl.motionOff
   const gridRef = useRef<HTMLDivElement>(null)
   const [dims, setDims] = useState({ weeks: 0, cell: 0 })
+
+  const source = gh?.contributions ?? fakeContrib
+  const total = gh?.totalContribs ?? fakeTotal
 
   useEffect(() => {
     const el = gridRef.current
@@ -42,10 +47,17 @@ export function ContributionsCard({ index }: { index: number }) {
     return () => clearInterval(iv)
   }, [motionOff])
 
-  const shown = dims.weeks ? contributions.slice(-dims.weeks * DAYS) : []
+  const shown = dims.weeks ? source.slice(-dims.weeks * DAYS) : []
 
   return (
-    <Card index={index} label={`${t('card.contributions')} · ${USER}`} right={`${totalContribs.toLocaleString('en-US')} ${t('contrib.year')}`} className="contrib">
+    <Card
+      index={index}
+      label={`${t('card.contributions')} · ${USER}`}
+      right={`${total.toLocaleString('en-US')} ${t('contrib.year')}`}
+      className="contrib"
+      tag={gh ? t('tag.live') : t('tag.sim')}
+      tagAlways
+    >
       <div
         className="contrib-grid"
         ref={gridRef}

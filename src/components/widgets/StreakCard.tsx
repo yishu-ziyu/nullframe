@@ -1,14 +1,31 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useReducedMotion } from 'motion/react'
 import { Card } from '../Card'
 import { useBootNumber, useCtl } from '../../system/hooks'
-import { streakDays, streakSince } from '../../system/fake'
-import { useT } from '../../system/i18n'
+import { streakDays as fakeStreak, streakSince as fakeSince } from '../../system/fake'
+import { useGitHub } from '../../system/github'
+import { useLang, useT } from '../../system/i18n'
+
+const EN_MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+
+function formatSince(ms: number, lang: 'en' | 'zh'): string {
+  const d = new Date(ms)
+  if (lang === 'zh') return `${d.getMonth() + 1}月${d.getDate()}日`
+  return `${String(d.getDate()).padStart(2, '0')} ${EN_MONTHS[d.getMonth()]}`
+}
 
 export function StreakCard({ index }: { index: number }) {
   const ctl = useCtl()
+  const gh = useGitHub()
+  const lang = useLang()
   const t = useT()
   const motionOff = (useReducedMotion() ?? false) || ctl.motionOff
+
+  const streakDays = gh?.streakDays ?? fakeStreak
+  const sinceLabel = useMemo(
+    () => (gh ? formatSince(gh.streakSinceMs, lang) : fakeSince),
+    [gh, lang],
+  )
   const shown = useBootNumber(streakDays)
   const [scramble, setScramble] = useState<string | null>(null)
 
@@ -35,7 +52,7 @@ export function StreakCard({ index }: { index: number }) {
   }, [motionOff])
 
   return (
-    <Card index={index} label={t('card.streak')} tag={t('tag.sim')} tagAlways>
+    <Card index={index} label={t('card.streak')} tag={gh ? t('tag.live') : t('tag.sim')} tagAlways>
       <div className="doto-val">
         {scramble ?? shown}
         <small>{t('streak.unit.day')}</small>
@@ -46,7 +63,7 @@ export function StreakCard({ index }: { index: number }) {
         ))}
       </div>
       <div className="mono-sub" style={{ marginTop: 12 }}>
-        {t('streak.since')} {streakSince} · {t('streak.best')}
+        {t('streak.since')} {sinceLabel} · {t('streak.best')}
       </div>
     </Card>
   )

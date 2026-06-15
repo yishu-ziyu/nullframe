@@ -1,4 +1,4 @@
-export const USER = '@nullframe'
+export const USER = '@yishu-ziyu'
 
 function mulberry32(seed: number) {
   let a = seed

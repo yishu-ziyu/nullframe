@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'motion/react'
 import { Card } from '../Card'
-import { commitMessages, USER } from '../../system/fake'
+import { commitMessages as fakeMsgs, USER } from '../../system/fake'
+import { useGitHub } from '../../system/github'
 import { useT } from '../../system/i18n'
 
 type Line = { msg: string; time: string }
@@ -11,11 +12,24 @@ const stamp = () => {
   const d = new Date()
   return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
+const stampFromIso = (iso: string) => {
+  const d = new Date(iso)
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
 
 export function ActivityCard({ index }: { index: number }) {
   const [lines, setLines] = useState<Line[]>([])
   const [typing, setTyping] = useState('')
+  const gh = useGitHub()
   const t = useT()
+
+  // Source order: real commits when available (with real timestamps), else fake msgs (stamped at type-time).
+  const queue = useMemo<Line[]>(() => {
+    if (gh && gh.commits.length > 0) {
+      return gh.commits.map(c => ({ msg: c.msg, time: stampFromIso(c.time) }))
+    }
+    return fakeMsgs.map(msg => ({ msg, time: '' }))
+  }, [gh])
 
   useEffect(() => {
     let alive = true
@@ -27,9 +41,10 @@ export function ActivityCard({ index }: { index: number }) {
         t = window.setTimeout(push, 7000)
         return
       }
-      const msg = commitMessages[idx % commitMessages.length]
+      const entry = queue[idx % queue.length]
       idx++
-      const time = stamp()
+      const msg = entry.msg
+      const time = entry.time || stamp()
       let i = 0
       const type = () => {
         if (!alive) return
@@ -50,10 +65,10 @@ export function ActivityCard({ index }: { index: number }) {
       alive = false
       clearTimeout(t)
     }
-  }, [])
+  }, [queue])
 
   return (
-    <Card index={index} label={`${t('card.activity')} · ${USER}`} right={t('activity.right')} className="feed">
+    <Card index={index} label={`${t('card.activity')} · ${USER}`} right={t('activity.right')} className="feed" tag={gh ? t('tag.live') : t('tag.sim')} tagAlways>
       <div className="feed-rows">
         {typing && (
           <div className="feed-row">
