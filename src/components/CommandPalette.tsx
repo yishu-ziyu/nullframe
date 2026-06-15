@@ -2,22 +2,24 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { motion } from 'motion/react'
 import { bus } from '../system/telemetry'
 import { useCtl } from '../system/hooks'
+import { useT } from '../system/i18n'
 
 export function CommandPalette() {
   const ctl = useCtl()
+  const t = useT()
   const [q, setQ] = useState('')
   const [sel, setSel] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const cmds = useMemo(
     () => [
-      { label: `Focus mode · ${ctl.focus ? 'off' : 'on'}`, run: () => ctl.setFocus(!ctl.focus) },
-      { label: 'Trigger sync sweep', run: () => bus.sync() },
-      { label: 'Reroll clock', run: () => bus.reroll() },
-      { label: `Motion FX · ${ctl.motionOff ? 'on' : 'off'}`, run: () => ctl.setMotionOff(!ctl.motionOff) },
-      { label: `Auto sweep · ${ctl.autoSweep ? 'off' : 'on'}`, run: () => ctl.setAutoSweep(!ctl.autoSweep) },
+      { label: ctl.focus ? t('cmd.focus.off') : t('cmd.focus.on'), run: () => ctl.setFocus(!ctl.focus) },
+      { label: t('cmd.sync'), run: () => bus.sync() },
+      { label: t('cmd.reroll'), run: () => bus.reroll() },
+      { label: ctl.motionOff ? t('cmd.motion.on') : t('cmd.motion.off'), run: () => ctl.setMotionOff(!ctl.motionOff) },
+      { label: ctl.autoSweep ? t('cmd.autosweep.off') : t('cmd.autosweep.on'), run: () => ctl.setAutoSweep(!ctl.autoSweep) },
     ],
-    [ctl],
+    [ctl, t],
   )
   const list = cmds.filter(c => c.label.toLowerCase().includes(q.toLowerCase()))
 
@@ -62,10 +64,10 @@ export function CommandPalette() {
           ref={inputRef}
           value={q}
           onChange={e => setQ(e.target.value)}
-          placeholder="RUN COMMAND…"
+          placeholder={t('cmd.placeholder')}
           spellCheck={false}
         />
-        {list.length === 0 && <div className="pal-empty">NO MATCH</div>}
+        {list.length === 0 && <div className="pal-empty">{t('cmd.nomatch')}</div>}
         {list.map((c, i) => (
           <div
             key={c.label}

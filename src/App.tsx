@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence } from 'motion/react'
 import { bus } from './system/telemetry'
 import { CtlCtx, type Ctl } from './system/hooks'
+import { langStore, useLang } from './system/i18n'
 import { ClockHero } from './components/widgets/ClockHero'
 import { RenderCard } from './components/widgets/RenderCard'
 import { MemoryCard } from './components/widgets/MemoryCard'
@@ -19,6 +20,7 @@ export default function App() {
   const [motionOff, setMotionOff] = useState(false)
   const [autoSweep, setAutoSweepState] = useState(true)
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const lang = useLang()
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -63,9 +65,14 @@ export default function App() {
         <ActivityCard index={9} />
       </main>
       <nav className="social-links">
+        <div className="lang-toggle" role="group" aria-label="language">
+          <button className={lang === 'en' ? 'on' : ''} onClick={() => langStore.set('en')} aria-pressed={lang === 'en'}>EN</button>
+          <span className="sep">|</span>
+          <button className={lang === 'zh' ? 'on' : ''} onClick={() => langStore.set('zh')} aria-pressed={lang === 'zh'}>中</button>
+        </div>
         <a
           className="social-btn"
-          href="https://github.com/m1ckc3s/nullframe"
+          href="https://github.com/yishu-ziyu/nullframe"
           target="_blank"
           rel="noopener noreferrer"
           aria-label="GitHub repository"

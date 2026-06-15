@@ -2,11 +2,13 @@ import { useEffect, useRef } from 'react'
 import { Card } from '../Card'
 import { bus } from '../../system/telemetry'
 import { useTelemetry, useBootNumber } from '../../system/hooks'
+import { useT } from '../../system/i18n'
 
 const BARS = 34
 
 export function NetworkCard({ index }: { index: number }) {
   const snap = useTelemetry()
+  const t = useT()
   const shown = useBootNumber(snap.net.downlink, 1)
   const ref = useRef<HTMLCanvasElement>(null)
 
@@ -61,13 +63,13 @@ export function NetworkCard({ index }: { index: number }) {
   }, [])
 
   return (
-    <Card index={index} label="Network" tag={snap.netReal ? 'LIVE' : 'SIM'} tagAlways>
+    <Card index={index} label={t('card.network')} tag={snap.netReal ? t('tag.live') : t('tag.sim')} tagAlways>
       <div className="metric">
         {shown}
         <small>MB/S</small>
       </div>
       <div className="mono-sub">
-        RTT {snap.net.rtt} MS · {snap.online ? 'ONLINE' : 'OFFLINE'}
+        {t('network.rtt')} {snap.net.rtt} MS · {snap.online ? t('network.online') : t('network.offline')}
       </div>
       <div className="canvas-fill" style={{ maxHeight: 44, marginTop: 'auto' }}>
         <canvas ref={ref} />

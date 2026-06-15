@@ -1,28 +1,42 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card } from '../Card'
 import { bus } from '../../system/telemetry'
 import { useTelemetry, useCtl } from '../../system/hooks'
-import { statusMessages } from '../../system/fake'
+import { useLang, useT, statusMessagesFor, type Lang } from '../../system/i18n'
 
 const pad = (n: number) => String(n).padStart(2, '0')
-const TZ = 'America/New_York'
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-const nyFmt = new Intl.DateTimeFormat('en-GB', {
-  timeZone: TZ,
-  year: 'numeric',
-  month: 'short',
-  day: '2-digit',
-  weekday: 'long',
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-  hourCycle: 'h23',
-})
+const TZ_FOR: Record<Lang, string> = {
+  en: 'America/New_York',
+  zh: 'Asia/Shanghai',
+}
+const LOCALE_FOR: Record<Lang, string> = {
+  en: 'en-GB',
+  zh: 'zh-CN',
+}
 
-function nyParts(ms: number) {
+function makeFmt(lang: Lang) {
+  return new Intl.DateTimeFormat(LOCALE_FOR[lang], {
+    timeZone: TZ_FOR[lang],
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    weekday: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  })
+}
+
+// Month number 1-12 in the target timezone; locale-independent so isoWeek stays correct.
+function makeMonthNumFmt(lang: Lang) {
+  return new Intl.DateTimeFormat('en', { timeZone: TZ_FOR[lang], month: 'numeric' })
+}
+
+function parts(fmt: Intl.DateTimeFormat, ms: number) {
   const out: Record<string, string> = {}
-  for (const p of nyFmt.formatToParts(new Date(ms))) out[p.type] = p.value
+  for (const p of fmt.formatToParts(new Date(ms))) out[p.type] = p.value
   return out
 }
 
@@ -34,6 +48,8 @@ function isoWeek(year: number, monthIdx: number, day: number) {
 }
 
 function TypedStatus() {
+  const lang = useLang()
+  const msgs = useMemo(() => statusMessagesFor(lang), [lang])
   const [txt, setTxt] = useState('')
   const [done, setDone] = useState(false)
   useEffect(() => {
@@ -43,7 +59,7 @@ function TypedStatus() {
     let t = 0
     const type = () => {
       if (!alive) return
-      const msg = statusMessages[idx]
+      const msg = msgs[idx]
       if (i < msg.length) {
         i++
         setTxt(msg.slice(0, i))
@@ -58,11 +74,11 @@ function TypedStatus() {
       if (!alive) return
       if (i > 0) {
         i = Math.max(0, i - 2)
-        setTxt(statusMessages[idx].slice(0, i))
+        setTxt(msgs[idx].slice(0, i))
         setDone(false)
         t = window.setTimeout(erase, 12)
       } else {
-        idx = (idx + 1) % statusMessages.length
+        idx = (idx + 1) % msgs.length
         t = window.setTimeout(type, 180)
       }
     }
@@ -71,7 +87,7 @@ function TypedStatus() {
       alive = false
       clearTimeout(t)
     }
-  }, [])
+  }, [msgs])
   const sp = txt.lastIndexOf(' ')
   const head = sp === -1 ? '' : txt.slice(0, sp + 1)
   const tail = sp === -1 ? txt : txt.slice(sp + 1)
@@ -86,9 +102,21 @@ function TypedStatus() {
   )
 }
 
+function dateLine(lang: Lang, year: string, month: string, day: string, week: number, weekLabel: string) {
+  if (lang === 'zh') {
+    // month is already "6月" in zh-CN short; day arrives zero-padded.
+    return `${year}年${month}${day}日 · ${weekLabel} ${week} 周`
+  }
+  return `${day} ${month.toUpperCase()} ${year} · ${weekLabel} ${week}`
+}
+
 export function ClockHero({ index }: { index: number }) {
   const snap = useTelemetry()
   const ctl = useCtl()
+  const lang = useLang()
+  const t = useT()
+  const fmt = useMemo(() => makeFmt(lang), [lang])
+  const monthNumFmt = useMemo(() => makeMonthNumFmt(lang), [lang])
   const [scramble, setScramble] = useState<string | null>(null)
   const motionOffRef = useRef(ctl.motionOff)
   motionOffRef.current = ctl.motionOff
@@ -117,17 +145,18 @@ export function ClockHero({ index }: { index: number }) {
     }
   }, [])
 
-  const p = nyParts(snap.now)
+  const p = parts(fmt, snap.now)
   const hhmm = scramble ?? `${p.hour}:${p.minute}`
-  const week = isoWeek(Number(p.year), MONTHS.indexOf(p.month), Number(p.day))
+  const monthNum = Number(monthNumFmt.format(new Date(snap.now)))
+  const week = isoWeek(Number(p.year), monthNum - 1, Number(p.day))
   const up = Math.floor((snap.now - snap.bootAt) / 1000)
   const uptime = `${pad(Math.floor(up / 3600))}:${pad(Math.floor((up % 3600) / 60))}:${pad(up % 60)}`
 
   return (
     <Card
       index={index}
-      label="Local time · New York"
-      right={<>SYS.V4.0.1<br />Uptime {uptime}</>}
+      label={t('card.clock')}
+      right={<>SYS.V4.0.1<br />{t('hero.uptime')} {uptime}</>}
       className="hero"
       essential
     >
@@ -140,7 +169,7 @@ export function ClockHero({ index }: { index: number }) {
         <div>
           <div className="day">{p.weekday}</div>
           <div className="mono-sub">
-            {p.day} {p.month.toUpperCase()} {p.year} · WEEK {week}
+            {dateLine(lang, p.year, p.month, p.day, week, t('hero.week'))}
           </div>
         </div>
         <TypedStatus />

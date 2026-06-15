@@ -7,7 +7,7 @@ type Props = {
   index: number
   label: string
   right?: ReactNode
-  tag?: 'LIVE' | 'SIM'
+  tag?: string
   tagAlways?: boolean
   className?: string
   essential?: boolean

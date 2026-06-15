@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useReducedMotion } from 'motion/react'
 import { Card } from '../Card'
 import { bus } from '../../system/telemetry'
+import { useT } from '../../system/i18n'
 
 const GW = 11
 const GH = 7
@@ -34,6 +35,7 @@ function easeOutBack(p: number) {
 
 export function GlyphCard({ index }: { index: number }) {
   const motionOff = useReducedMotion() ?? false
+  const t = useT()
   const ref = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -115,7 +117,7 @@ export function GlyphCard({ index }: { index: number }) {
   }, [motionOff])
 
   return (
-    <Card index={index} label="Glyph · G1" right="Sync">
+    <Card index={index} label={t('card.glyph')} right={t('glyph.sync')}>
       <div className="canvas-fill">
         <canvas ref={ref} />
       </div>

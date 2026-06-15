@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
 import { Card } from '../Card'
 import { commitMessages, USER } from '../../system/fake'
+import { useT } from '../../system/i18n'
 
 type Line = { msg: string; time: string }
 
@@ -14,6 +15,7 @@ const stamp = () => {
 export function ActivityCard({ index }: { index: number }) {
   const [lines, setLines] = useState<Line[]>([])
   const [typing, setTyping] = useState('')
+  const t = useT()
 
   useEffect(() => {
     let alive = true
@@ -51,7 +53,7 @@ export function ActivityCard({ index }: { index: number }) {
   }, [])
 
   return (
-    <Card index={index} label={`Activity · ${USER}`} right="push · main" className="feed">
+    <Card index={index} label={`${t('card.activity')} · ${USER}`} right={t('activity.right')} className="feed">
       <div className="feed-rows">
         {typing && (
           <div className="feed-row">

@@ -2,9 +2,11 @@ import { useEffect, useRef } from 'react'
 import { Card } from '../Card'
 import { bus } from '../../system/telemetry'
 import { useTelemetry, useBootNumber } from '../../system/hooks'
+import { useT } from '../../system/i18n'
 
 export function SeismoCard({ index }: { index: number }) {
   const snap = useTelemetry()
+  const t = useT()
   const shown = useBootNumber(snap.inputRate)
   const ref = useRef<HTMLCanvasElement>(null)
 
@@ -67,18 +69,18 @@ export function SeismoCard({ index }: { index: number }) {
   return (
     <Card
       index={index}
-      label="Input seismograph · CH 01"
+      label={t('card.seismo')}
       right={
         <span className="rec">
           <span className="led red" />
-          REC
+          {t('tag.rec')}
         </span>
       }
       className="seismo"
     >
       <div className="bpm">
         <span className="doto-mid">{shown}</span>
-        <span className="mono-sub">EVT/MIN · pointer + keys</span>
+        <span className="mono-sub">{t('seismo.unit')}</span>
       </div>
       <div className="canvas-fill" style={{ marginTop: 6 }}>
         <canvas ref={ref} />

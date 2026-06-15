@@ -3,11 +3,13 @@ import { useReducedMotion } from 'motion/react'
 import { Card } from '../Card'
 import { useCtl } from '../../system/hooks'
 import { contributions, totalContribs, USER, WEEKS, DAYS } from '../../system/fake'
+import { useT } from '../../system/i18n'
 
 const GAP = 3
 
 export function ContributionsCard({ index }: { index: number }) {
   const ctl = useCtl()
+  const t = useT()
   const motionOff = (useReducedMotion() ?? false) || ctl.motionOff
   const gridRef = useRef<HTMLDivElement>(null)
   const [dims, setDims] = useState({ weeks: 0, cell: 0 })
@@ -43,7 +45,7 @@ export function ContributionsCard({ index }: { index: number }) {
   const shown = dims.weeks ? contributions.slice(-dims.weeks * DAYS) : []
 
   return (
-    <Card index={index} label={`Contributions · ${USER}`} right={`${totalContribs.toLocaleString('en-US')} / YR`} className="contrib">
+    <Card index={index} label={`${t('card.contributions')} · ${USER}`} right={`${totalContribs.toLocaleString('en-US')} ${t('contrib.year')}`} className="contrib">
       <div
         className="contrib-grid"
         ref={gridRef}
@@ -62,8 +64,8 @@ export function ContributionsCard({ index }: { index: number }) {
         })}
       </div>
       <div className="meta-row">
-        <span>{dims.weeks || WEEKS} weeks</span>
-        <span>Best 23 / day</span>
+        <span>{dims.weeks || WEEKS} {t('contrib.weeks')}</span>
+        <span>{t('contrib.best')}</span>
       </div>
     </Card>
   )
