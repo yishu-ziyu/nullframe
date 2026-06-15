@@ -63,13 +63,15 @@ export function NetworkCard({ index }: { index: number }) {
   }, [])
 
   return (
-    <Card index={index} label={t('card.network')} tag={snap.netReal ? t('tag.live') : t('tag.sim')} tagAlways>
+    <Card index={index} label={t('card.network')} tag={t('tag.live')} tagAlways>
       <div className="metric">
-        {shown}
-        <small>MB/S</small>
+        {snap.netReal ? shown : (snap.net.rtt || '—')}
+        <small>{snap.netReal ? 'MB/S' : 'MS'}</small>
       </div>
       <div className="mono-sub">
-        {t('network.rtt')} {snap.net.rtt} MS · {snap.online ? t('network.online') : t('network.offline')}
+        {snap.netReal
+          ? `${t('network.rtt')} ${snap.net.rtt} MS · ${snap.online ? t('network.online') : t('network.offline')}`
+          : `${t('network.ping')} · ${snap.online ? t('network.online') : t('network.offline')}`}
       </div>
       <div className="canvas-fill" style={{ maxHeight: 44, marginTop: 'auto' }}>
         <canvas ref={ref} />

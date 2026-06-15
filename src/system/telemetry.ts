@@ -6,6 +6,8 @@ export type Snapshot = {
   heapMB: number
   heapLimitMB: number
   heapReal: boolean
+  heapSource: 'heap' | 'page'
+  domNodes: number
   battery: { level: number; charging: boolean } | null
   batteryReal: boolean
   net: { downlink: number; rtt: number; type: string }
@@ -27,6 +29,8 @@ let snap: Snapshot = {
   heapMB: 384,
   heapLimitMB: 4096,
   heapReal: false,
+  heapSource: 'heap',
+  domNodes: 0,
   battery: null,
   batteryReal: false,
   net: { downlink: 8.4, rtt: 24, type: 'wifi' },
@@ -48,8 +52,6 @@ let fpsEma = 60
 let vel = 0
 let velTarget = 0
 let lastMove = 0
-let simHeap = 384
-let simNet = 8.4
 let battery: Snapshot['battery'] = null
 let batteryReal = false
 let autoSweep = true
@@ -66,13 +68,37 @@ function emit(name: string) {
   events.get(name)?.forEach(fn => fn())
 }
 
-function readHeap() {
+function readHeap(): { mb: number; lim: number; real: boolean; source: 'heap' | 'page' } {
   const m = (performance as { memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number } }).memory
   if (m?.usedJSHeapSize) {
-    return { mb: m.usedJSHeapSize / 1048576, lim: m.jsHeapSizeLimit / 1048576, real: true }
+    return { mb: m.usedJSHeapSize / 1048576, lim: m.jsHeapSizeLimit / 1048576, real: true, source: 'heap' }
   }
-  simHeap = Math.min(880, Math.max(290, simHeap + (Math.random() - 0.5) * 16))
-  return { mb: simHeap, lim: 4096, real: false }
+  // Cross-browser real fallback: page network weight via Resource Timing API.
+  let bytes = 0
+  for (const r of performance.getEntriesByType('resource') as PerformanceResourceTiming[]) {
+    bytes += r.transferSize || r.encodedBodySize || 0
+  }
+  const navEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined
+  if (navEntry) bytes += navEntry.transferSize || navEntry.encodedBodySize || 0
+  return { mb: bytes / 1048576, lim: 10, real: true, source: 'page' }
+}
+
+let measuredPingMs = 0
+let pingInflight = false
+let pingTimer = 0
+
+async function measurePing() {
+  if (pingInflight) return
+  pingInflight = true
+  const start = performance.now()
+  try {
+    await fetch(`/favicon.ico?_t=${Date.now()}`, { cache: 'no-store', method: 'HEAD' })
+    measuredPingMs = Math.round(performance.now() - start)
+  } catch {
+    measuredPingMs = 0
+  } finally {
+    pingInflight = false
+  }
 }
 
 function readNet() {
@@ -80,8 +106,9 @@ function readNet() {
   if (c && typeof c.downlink === 'number') {
     return { net: { downlink: c.downlink, rtt: c.rtt ?? 25, type: c.effectiveType ?? 'wifi' }, real: true }
   }
-  simNet = Math.min(10, Math.max(5.2, simNet + (Math.random() - 0.5) * 0.8))
-  return { net: { downlink: simNet, rtt: Math.round(18 + Math.random() * 14), type: 'wifi' }, real: false }
+  // Cross-browser real fallback: measured RTT to our own origin (ping loop updates measuredPingMs).
+  // Downlink is unavailable cross-browser; we surface it as 0 and let the widget hide that field when so.
+  return { net: { downlink: 0, rtt: measuredPingMs, type: 'wifi' }, real: true }
 }
 
 function publish() {
@@ -97,6 +124,8 @@ function publish() {
     heapMB: heap.mb,
     heapLimitMB: heap.lim,
     heapReal: heap.real,
+    heapSource: heap.source,
+    domNodes: typeof document !== 'undefined' ? document.getElementsByTagName('*').length : 0,
     battery,
     batteryReal,
     net,
@@ -197,6 +226,14 @@ export const bus = {
       buckets[bucketIdx] = 0
     }, 1000)
     startSweep()
+    // Real RTT loop only fires when Network Info API is missing; otherwise navigator.connection.rtt is fresher.
+    const hasNetApi = !!(navigator as { connection?: { downlink?: number } }).connection?.downlink
+    if (!hasNetApi) {
+      void measurePing()
+      pingTimer = window.setInterval(() => {
+        if (!document.hidden) void measurePing()
+      }, 3000)
+    }
     const getBattery = (navigator as { getBattery?: () => Promise<{ level: number; charging: boolean; addEventListener: (n: string, f: () => void) => void }> }).getBattery
     getBattery?.call(navigator).then(b => {
       const update = () => {
@@ -221,6 +258,7 @@ export const bus = {
     cancelAnimationFrame(raf)
     clearInterval(bucketTimer)
     clearInterval(sweepTimer)
+    clearInterval(pingTimer)
     window.removeEventListener('pointermove', onPointerMove)
     window.removeEventListener('pointerdown', onInput)
     window.removeEventListener('keydown', onInput)
