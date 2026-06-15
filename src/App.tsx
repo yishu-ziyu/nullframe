@@ -5,10 +5,10 @@ import { CtlCtx, type Ctl } from './system/hooks'
 import { langStore, useLang } from './system/i18n'
 import { ClockHero } from './components/widgets/ClockHero'
 import { RenderCard } from './components/widgets/RenderCard'
-import { MemoryCard } from './components/widgets/MemoryCard'
+import { NodesCard } from './components/widgets/MemoryCard'
 import { GlyphCard } from './components/widgets/GlyphCard'
-import { BatteryCard } from './components/widgets/BatteryCard'
-import { NetworkCard } from './components/widgets/NetworkCard'
+import { DeviceCard } from './components/widgets/BatteryCard'
+import { PingCard } from './components/widgets/NetworkCard'
 import { ContributionsCard } from './components/widgets/ContributionsCard'
 import { StreakCard } from './components/widgets/StreakCard'
 import { SeismoCard } from './components/widgets/SeismoCard'
@@ -55,10 +55,10 @@ export default function App() {
       <main className={`bento ${focus ? 'focus' : ''} ${motionOff ? 'nofx' : ''}`}>
         <ClockHero index={0} />
         <RenderCard index={1} />
-        <MemoryCard index={2} />
+        <NodesCard index={2} />
         <GlyphCard index={3} />
-        <BatteryCard index={4} />
-        <NetworkCard index={5} />
+        <DeviceCard index={4} />
+        <PingCard index={5} />
         <ContributionsCard index={6} />
         <StreakCard index={7} />
         <SeismoCard index={8} />

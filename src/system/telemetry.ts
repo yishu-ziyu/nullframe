@@ -3,13 +3,14 @@ export type Snapshot = {
   bootAt: number
   fps: number
   frameMs: number
+  deviceCores: number
+  screenW: number
+  screenH: number
   heapMB: number
   heapLimitMB: number
   heapReal: boolean
   heapSource: 'heap' | 'page'
   domNodes: number
-  battery: { level: number; charging: boolean } | null
-  batteryReal: boolean
   net: { downlink: number; rtt: number; type: string }
   netReal: boolean
   online: boolean
@@ -26,13 +27,14 @@ let snap: Snapshot = {
   bootAt,
   fps: 60,
   frameMs: 16.7,
+  deviceCores: navigator.hardwareConcurrency || 0,
+  screenW: typeof screen !== 'undefined' ? screen.width : 0,
+  screenH: typeof screen !== 'undefined' ? screen.height : 0,
   heapMB: 384,
   heapLimitMB: 4096,
   heapReal: false,
   heapSource: 'heap',
   domNodes: 0,
-  battery: null,
-  batteryReal: false,
   net: { downlink: 8.4, rtt: 24, type: 'wifi' },
   netReal: false,
   online: true,
@@ -52,8 +54,6 @@ let fpsEma = 60
 let vel = 0
 let velTarget = 0
 let lastMove = 0
-let battery: Snapshot['battery'] = null
-let batteryReal = false
 let autoSweep = true
 let sweepTimer = 0
 let bucketTimer = 0
@@ -121,13 +121,14 @@ function publish() {
     bootAt,
     fps: Math.min(240, Math.round(fpsEma)),
     frameMs: 1000 / Math.max(1, fpsEma),
+    deviceCores: navigator.hardwareConcurrency || snap.deviceCores,
+    screenW: typeof screen !== 'undefined' ? screen.width : snap.screenW,
+    screenH: typeof screen !== 'undefined' ? screen.height : snap.screenH,
     heapMB: heap.mb,
     heapLimitMB: heap.lim,
     heapReal: heap.real,
     heapSource: heap.source,
     domNodes: typeof document !== 'undefined' ? document.getElementsByTagName('*').length : 0,
-    battery,
-    batteryReal,
     net,
     netReal,
     online: navigator.onLine,
@@ -226,27 +227,12 @@ export const bus = {
       buckets[bucketIdx] = 0
     }, 1000)
     startSweep()
-    // Real RTT loop only fires when Network Info API is missing; otherwise navigator.connection.rtt is fresher.
-    const hasNetApi = !!(navigator as { connection?: { downlink?: number } }).connection?.downlink
-    if (!hasNetApi) {
+    // Real RTT loop only fires when Network Info API is missing.
+    if (!(navigator as { connection?: { downlink?: number } }).connection?.downlink) {
       void measurePing()
       pingTimer = window.setInterval(() => {
         if (!document.hidden) void measurePing()
       }, 3000)
-    }
-    const getBattery = (navigator as { getBattery?: () => Promise<{ level: number; charging: boolean; addEventListener: (n: string, f: () => void) => void }> }).getBattery
-    getBattery?.call(navigator).then(b => {
-      const update = () => {
-        battery = { level: b.level, charging: b.charging }
-        batteryReal = true
-      }
-      update()
-      b.addEventListener('levelchange', update)
-      b.addEventListener('chargingchange', update)
-    }).catch(() => {})
-    if (!getBattery) {
-      battery = { level: 0.87, charging: false }
-      batteryReal = false
     }
     last = performance.now()
     raf = requestAnimationFrame(frame)

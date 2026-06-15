@@ -6,10 +6,10 @@ import { useT } from '../../system/i18n'
 
 const BARS = 34
 
-export function NetworkCard({ index }: { index: number }) {
+export function PingCard({ index }: { index: number }) {
   const snap = useTelemetry()
   const t = useT()
-  const shown = useBootNumber(snap.net.downlink, 1)
+  const shown = useBootNumber(snap.net.rtt)
   const ref = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -40,7 +40,7 @@ export function NetworkCard({ index }: { index: number }) {
       acc += dt
       if (acc < 0.18) return
       acc = 0
-      const base = Math.min(1, bus.get().net.downlink / 10)
+      const base = Math.min(1, bus.get().net.rtt / 500)
       const burst = Math.random() < 0.07 ? 1.7 : 1
       buf[head] = Math.min(1, Math.max(0.06, base * (0.45 + Math.random() * 0.55) * burst))
       head = (head + 1) % BARS
@@ -63,15 +63,13 @@ export function NetworkCard({ index }: { index: number }) {
   }, [])
 
   return (
-    <Card index={index} label={t('card.network')} tag={t('tag.live')} tagAlways>
+    <Card index={index} label={t('card.ping')} tag={t('tag.live')} tagAlways>
       <div className="metric">
-        {snap.netReal ? shown : (snap.net.rtt || '—')}
-        <small>{snap.netReal ? 'MB/S' : 'MS'}</small>
+        {shown}
+        <small>MS</small>
       </div>
       <div className="mono-sub">
-        {snap.netReal
-          ? `${t('network.rtt')} ${snap.net.rtt} MS · ${snap.online ? t('network.online') : t('network.offline')}`
-          : `${t('network.ping')} · ${snap.online ? t('network.online') : t('network.offline')}`}
+        {t('network.rtt')} {snap.net.rtt} MS · {snap.online ? t('network.online') : t('network.offline')}
       </div>
       <div className="canvas-fill" style={{ maxHeight: 44, marginTop: 'auto' }}>
         <canvas ref={ref} />
